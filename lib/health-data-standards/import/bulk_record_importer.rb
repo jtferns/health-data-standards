@@ -1,15 +1,16 @@
 require 'fileutils'
+require 'uuid'
 module HealthDataStandards
   module Import
     class BulkRecordImporter
 
-      def self.import_directory(source_dir)
+      def self.import_directory(source_dir,options={})
 
         xml_files = Dir.glob(File.join(source_dir, '*.*'))
         xml_files.each do |file|
           begin
             
-            result = RecordImporter.import(File.new(file).read, provider_map)
+            result = BulkRecordImporter.import(File.new(file).read, options)
             
             if (result[:status] == 'success') 
               record = result[:record]
@@ -28,13 +29,13 @@ module HealthDataStandards
         end
       end
       
-      def self.import_archive(file) 
+      def self.import_archive(file, options={}) 
         Zip::ZipFile.open(file.path) do |zipfile|
           zipfile.entries.each do |entry|
             next if entry.directory?
             xml = zipfile.read(entry.name)
             begin
-              BulkRecordImporter.import(xml)
+              BulkRecordImporter.import(xml,options)
             rescue Exception => e
               failed_dir = File.join(file.dirname, 'failed_imports')
               unless(Dir.exists?(failed_dir))
@@ -46,7 +47,7 @@ module HealthDataStandards
         end
       end
       
-      def self.import(xml_data, provider_map = {})
+      def self.import(xml_data,options={})
         doc = Nokogiri::XML(xml_data)
         
         providers = []
@@ -75,8 +76,9 @@ module HealthDataStandards
         else
           return {status: 'error', message: 'Unknown XML Format', status_code: 400}
         end
-
-        record = Record.update_or_create(patient_data)
+        # this most likely will only be used in testing but is 
+        record.medical_record_number =  options[:mrn_generator].generate if options[:mrn_generator]
+        record = Record.update_or_create(patient_data,options)
         record.provider_performances = providers
         record.save
         
