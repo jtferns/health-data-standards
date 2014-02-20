@@ -61,8 +61,15 @@ module HQMF
                   new_data_criteria.negation=true
                   restriction.converted=true
                 when 'SUBJ'
-                  new_data_criteria.field_values ||= {}
-                  new_data_criteria.field_values[operator.field_value_key] = operator.value
+                  # Cumulative medication duration is swapped to be a subset operator rather than a field since it acts against multiple medicaiton entries                  
+                  if (operator.field_value_key == 'CUMULATIVE_MEDICATION_DURATION')
+                    restriction.target = new_data_criteria.id
+                    operator.type = operator.field_value_key
+                    HQMF::OperatorConverter.apply_summary(new_data_criteria, precondition, restriction, @data_criteria_converter)
+                  else
+                    new_data_criteria.field_values ||= {}
+                    new_data_criteria.field_values[operator.field_value_key] = operator.value
+                  end
                   restriction.converted=true
                 else
                   puts "\tOperator is unknown: #{operator.type}"
