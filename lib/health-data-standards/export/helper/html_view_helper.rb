@@ -19,6 +19,15 @@ module HealthDataStandards
             status
           end
         end
+
+        def decode_hqmf_description(description, oid)
+          if oid
+            definition = HealthDataStandards::Util::HQMFTemplateHelper.definition_for_template_id(oid)
+            "#{definition['definition'].titleize}, #{definition['status'].titleize}".to_sym
+          else
+            description
+          end
+        end
       end
     end
   end
